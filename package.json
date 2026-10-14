@@ -1,0 +1,8 @@
+{
+  "name": "sou-fiscal-infra",
+  "private": true,
+  "description": "Definição do projeto Sou Fiscal no Railway",
+  "dependencies": {
+    "railway": "^3.13.0"
+  }
+}

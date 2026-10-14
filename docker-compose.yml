@@ -32,9 +32,55 @@ services:
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: soufiscal-local
       TSE_DIR: /dados/arquivos-tse
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      ANALISE_IMAGENS_DIR: /dados/analises
+      ANALISE_S3_BUCKET: ${ANALISE_S3_BUCKET:-}
+      ANALISE_S3_ENDPOINT: ${ANALISE_S3_ENDPOINT:-}
+      ANALISE_S3_REGION: ${ANALISE_S3_REGION:-auto}
+      ANALISE_S3_ACCESS_KEY_ID: ${ANALISE_S3_ACCESS_KEY_ID:-}
+      ANALISE_S3_SECRET_ACCESS_KEY: ${ANALISE_S3_SECRET_ACCESS_KEY:-}
       CORS_ORIGINS: http://localhost:3000,http://localhost:5173
     volumes:
-      - ../../arquivos-tse:/dados/arquivos-tse:ro
+      - ../import/arquivos-tse:/dados/arquivos-tse:ro
+      - analise-imagens:/dados/analises
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+  worker:
+    image: sou-fiscal-back
+    build:
+      context: ../back
+    command: ["node", "src/worker.js"]
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: soufiscal-local
+      ANALISE_AGUARDAR: "1"
+      ANALISE_SCORE_MINIMO: ${ANALISE_SCORE_MINIMO:-55}
+      ANALISE_LIMITE_DIARIO: ${ANALISE_LIMITE_DIARIO:-50}
+      ANALISE_PRIORIZAR_INTERVALO_MIN: ${ANALISE_PRIORIZAR_INTERVALO_MIN:-1}
+      ANALISE_PRIORIZAR_CANDIDATURAS: ${ANALISE_PRIORIZAR_CANDIDATURAS:-80}
+      ANALISE_PRIORIZAR_ORCAMENTO_MS: ${ANALISE_PRIORIZAR_ORCAMENTO_MS:-45000}
+      ANALISE_IMAGENS_DIR: /dados/analises
+      FACHADA_FONTE_DIR: /dados/fachadas
+      FACHADA_FONTE_URL_TEMPLATE: ${FACHADA_FONTE_URL_TEMPLATE:-}
+      FACHADA_FONTE_NOME: ${FACHADA_FONTE_NOME:-}
+      FACHADA_FONTE_LICENCA: ${FACHADA_FONTE_LICENCA:-}
+      FACHADA_FONTE_PERMITE_IA: ${FACHADA_FONTE_PERMITE_IA:-0}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gpt-4.1-mini}
+      AI_CUSTO_ENTRADA_USD_MILHAO: ${AI_CUSTO_ENTRADA_USD_MILHAO:-0}
+      AI_CUSTO_SAIDA_USD_MILHAO: ${AI_CUSTO_SAIDA_USD_MILHAO:-0}
+      ANALISE_S3_BUCKET: ${ANALISE_S3_BUCKET:-}
+      ANALISE_S3_ENDPOINT: ${ANALISE_S3_ENDPOINT:-}
+      ANALISE_S3_REGION: ${ANALISE_S3_REGION:-auto}
+      ANALISE_S3_ACCESS_KEY_ID: ${ANALISE_S3_ACCESS_KEY_ID:-}
+      ANALISE_S3_SECRET_ACCESS_KEY: ${ANALISE_S3_SECRET_ACCESS_KEY:-}
+    volumes:
+      - analise-imagens:/dados/analises
+      - ${FACHADA_FONTE_DIR_HOST:-../dados/fachadas}:/dados/fachadas:ro
     depends_on:
       neo4j:
         condition: service_healthy
@@ -45,6 +91,10 @@ services:
       context: ../web
     ports:
       - "3000:3000"
+    environment:
+      BACKEND_HOST: back
+      BACKEND_PORT: "3001"
+      NGINX_RESOLVER: "127.0.0.11 ipv6=off valid=10s"
     depends_on:
       - back
 
@@ -60,11 +110,12 @@ services:
       TSE_DIR: /dados/arquivos-tse
       RECEITA_DIR: /dados/arquivos-receita
     volumes:
-      - ../../arquivos-tse:/dados/arquivos-tse:ro
-      - ../../arquivos-receita:/dados/arquivos-receita:ro
+      - ../import/arquivos-tse:/dados/arquivos-tse:ro
+      - ../import/arquivos-receita:/dados/arquivos-receita:ro
     depends_on:
       neo4j:
         condition: service_healthy
 
 volumes:
   neo4j-data:
+  analise-imagens:
